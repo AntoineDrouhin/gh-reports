@@ -1,4 +1,4 @@
-use octocrab::Octocrab;
+use octocrab::{Octocrab, models};
 
 #[tokio::main]
 async fn main() -> octocrab::Result<()> {
@@ -15,6 +15,7 @@ async fn main() -> octocrab::Result<()> {
         .unwrap()
         .personal_token(token)
         .build()?;
+        
 
     let repo = octocrab.repos(&repo_owner, &repo_name);
     let repo_info = repo.get().await?;
@@ -24,6 +25,36 @@ async fn main() -> octocrab::Result<()> {
         repo_info.full_name.unwrap(),
         repo_info.stargazers_count.unwrap_or(0),
     );
+
+
+    let mut pr_pages = octocrab
+    .pulls(repo_owner, repo_name)
+    .list()
+    .state(octocrab::params::State::Open)
+    .send()
+    .await?;
+
+    loop {
+        for pr in &pr_pages {
+
+            let  title: String;
+            match &pr.title {
+                Some(p) => title =  p.to_owned(),
+                None => title = pr.id.to_string(),
+            };
+
+
+            println!("{}", title)
+        }
+        pr_pages = match octocrab
+            .get_page::<models::pulls::PullRequest>(&pr_pages.next)
+            .await?
+    {
+        Some(next_page) => next_page,
+        None => break,
+    }
+    }
+
 
     Ok(())
 }
